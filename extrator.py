@@ -11,10 +11,10 @@ def carregar_config():
         with open(CONFIG_FILE, "r") as f:
             return json.load(f)
     return {
-        "api_id": ,
-        "api_hash": "",
-        "bot_alvo": "",
-        "download_dir": ""
+        "api_id": 35358927, 
+        "api_hash": "2d06935658e2ddfd3eeeef71fb60117e",
+        "bot_alvo": "@VAZOUMC_BOT",
+        "download_dir": "/sdcard/Download/previas_extraidas"
     }
 
 def salvar_config(cfg):
@@ -72,18 +72,20 @@ async def handler(event):
         pass
 
 def mostrar_banner():
-    print("\033[1;31m╔══════════════════════════════════════════════════╗\033[0m")
-    print("\033[1;36m")
-    print("  ███████╗██╗  ██╗████████╗██████╗  █████╗  ██████╗")
-    print("  ██╔════╝╚██╗██╔╝╚══██╔══╝██╔══██╗██╔══██╗██╔════╝")
-    print("  █████╗   ╚███╔╝    ██║   ██████╔╝███████║██║     ")
-    print("  ██╔══╝   ██╔██╗    ██║   ██╔══██╗██╔══██║██║     ")
-    print("  ███████╗██╔╝ ██╗   ██║   ██║  ██║██║  ██║╚██████╗")
-    print("  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝")
-    print("\033[0m")
-    print("\033[1;31m╚══════════════════════════════════════════════════╝\033[0m")
-    print("\033[1;33m       [ PAINEL DE EXTRAÇÃO - PRO V4 ]\033[0m")
-    print("\033[1;35m           Criado por: @zetx.py\033[0m\n")
+    # Moldura vermelha
+    print("\033[1;31m╔════════════════════════════════════════════════════════════════════════════╗\033[0m")
+    
+    # Letras gigantes com cores diferentes por linha
+    print("\033[1;31m  ███████╗██╗  ██╗████████╗██████╗  █████╗  ██████╗████████╗ ██████╗ ██████╗ \033[0m")
+    print("\033[1;33m  ██╔════╝╚██╗██╔╝╚══██╔══╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗\033[0m")
+    print("\033[1;32m  █████╗   ╚███╔╝    ██║   ██████╔╝███████║██║        ██║   ██║   ██║██████╔╝\033[0m")
+    print("\033[1;36m  ██╔══╝   ██╔██╗    ██║   ██╔══██╗██╔══██║██║        ██║   ██║   ██║██╔══██╗\033[0m")
+    print("\033[1;34m  ███████╗██╔╝ ██╗   ██║   ██║  ██║██║  ██║╚██████╗   ██║   ╚██████╔╝██║  ██║\033[0m")
+    print("\033[1;35m  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝\033[0m")
+    
+    print("\033[1;31m╚════════════════════════════════════════════════════════════════════════════╝\033[0m")
+    print("\033[1;33m                         [ PAINEL DE EXTRAÇÃO - PRO V4 ]\033[0m")
+    print("\033[1;35m                             Criado por: @zetx.py\033[0m\n")
 
 async def painel():
     while True:
@@ -192,4 +194,3 @@ with client:
         client.loop.run_until_complete(main())
     except KeyboardInterrupt:
         print("\n[!] Fechando script.")
-EOF
