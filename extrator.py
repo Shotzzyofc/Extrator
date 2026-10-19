@@ -72,38 +72,35 @@ async def handler(event):
         pass
 
 def mostrar_banner():
-    # Cyberpunk Neon Theme: Alternando Ciano e Magenta
-    borda = "\033[1;35m"   # Magenta
-    ciano = "\033[1;96m"   # Ciano Brilhante
-    rosa = "\033[1;95m"    # Magenta Brilhante
-    amarelo = "\033[1;93m" # Amarelo Brilhante
+    # Tema verde escuro sólido
+    verde = "\033[0;32m"
     reset = "\033[0m"
 
-    print(f"{borda}┌──────────────────────────────────────────────────────────────────┐{reset}")
-    print(f"{ciano} ███████╗██╗  ██╗████████╗██████╗  █████╗  ██████╗████████╗ ██████╗ ██████╗ {reset}")
-    print(f"{rosa}  ██╔════╝╚██╗██╔╝╚══██╔══╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗{reset}")
-    print(f"{ciano}  █████╗   ╚███╔╝    ██║   ██████╔╝███████║██║        ██║   ██║   ██║██████╔╝{reset}")
-    print(f"{rosa}  ██╔══╝   ██╔██╗    ██║   ██╔══██╗██╔══██║██║        ██║   ██║   ██║██╔══██╗{reset}")
-    print(f"{ciano}  ███████╗██╔╝ ██╗   ██║   ██║  ██║██║  ██║╚██████╗   ██║   ╚██████╔╝██║  ██║{reset}")
-    print(f"{rosa}  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝{reset}")
-    print(f"{borda}└──────────────────────────────────────────────────────────────────┘{reset}")
-    print(f"{amarelo}               [ SYSTEM PRO V4 ] :: Criado por @zetx.py{reset}\n")
+    print(f"{verde}┌──────────────────────────────────────────────────────────────────┐{reset}")
+    print(f"{verde} ███████╗██╗  ██╗████████╗██████╗  █████╗  ██████╗████████╗ ██████╗ ██████╗ {reset}")
+    print(f"{verde}  ██╔════╝╚██╗██╔╝╚══██╔══╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗{reset}")
+    print(f"{verde}  █████╗   ╚███╔╝    ██║   ██████╔╝███████║██║        ██║   ██║   ██║██████╔╝{reset}")
+    print(f"{verde}  ██╔══╝   ██╔██╗    ██║   ██╔══██╗██╔══██║██║        ██║   ██║   ██║██╔══██╗{reset}")
+    print(f"{verde}  ███████╗██╔╝ ██╗   ██║   ██║  ██║██║  ██║╚██████╗   ██║   ╚██████╔╝██║  ██║{reset}")
+    print(f"{verde}  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝{reset}")
+    print(f"{verde}└──────────────────────────────────────────────────────────────────┘{reset}")
+    print(f"{verde}               [ SYSTEM PRO V4 ] :: Criado por @zetx.py{reset}\n")
 
 async def painel():
     while True:
         os.system('clear')
         mostrar_banner()
         
-        print("\033[1;35m--------------------------------------------------------------------\033[0m")
-        print(" \033[1;36m[1]\033[0m 📱 Trocar Bot Alvo")
-        print(" \033[1;36m[2]\033[0m 📂 Alterar Pasta de Salvamento")
-        print(" \033[1;36m[3]\033[0m 🔑 Alterar API (ID e Hash)")
-        print(" \033[1;36m[4]\033[0m 🎯 Iniciar Captura (Ouvir o bot)")
-        print(" \033[1;36m[5]\033[0m ❌ Sair")
-        print("\033[1;35m--------------------------------------------------------------------\033[0m")
+        print("\033[0;32m--------------------------------------------------------------------\033[0m")
+        print(" \033[0;32m[1]\033[0m 📱 Trocar Bot Alvo")
+        print(" \033[0;32m[2]\033[0m 📂 Alterar Pasta de Salvamento")
+        print(" \033[0;32m[3]\033[0m 🔑 Alterar API (ID e Hash)")
+        print(" \033[0;32m[4]\033[0m 🎯 Iniciar Captura (Ouvir o bot)")
+        print(" \033[0;32m[5]\033[0m ❌ Sair")
+        print("\033[0;32m--------------------------------------------------------------------\033[0m")
         
         try:
-            opcao = await asyncio.to_thread(input, " \033[1;32mEscolha uma opção:\033[0m ")
+            opcao = await asyncio.to_thread(input, " \033[0;32mEscolha uma opção:\033[0m ")
         except EOFError:
             break
             
@@ -115,7 +112,7 @@ async def painel():
                 if not novo_bot.startswith('@'): novo_bot = '@' + novo_bot
                 config["bot_alvo"] = novo_bot
                 salvar_config(config)
-                print(f"\n\033[1;34m[!] Alvo alterado com sucesso.\033[0m")
+                print(f"\n\033[0;32m[!] Alvo alterado com sucesso.\033[0m")
                 await asyncio.sleep(1.5)
 
         elif opcao == '2':
@@ -128,7 +125,7 @@ async def painel():
                     os.makedirs(novo_dir, exist_ok=True)
                     config["download_dir"] = novo_dir
                     salvar_config(config)
-                    print(f"\n\033[1;34m[!] Diretório alterado com sucesso.\033[0m")
+                    print(f"\n\033[0;32m[!] Diretório alterado com sucesso.\033[0m")
                 except Exception as e:
                     print(f"\n\033[1;31m[ERRO] Caminho inválido: {e}\033[0m")
                 await asyncio.sleep(2)
@@ -136,7 +133,7 @@ async def painel():
         elif opcao == '3':
             os.system('clear')
             mostrar_banner()
-            print("\033[1;33m--- TUTORIAL: COMO PEGAR UMA API DO TELEGRAM ---\033[0m")
+            print("\033[0;32m--- TUTORIAL: COMO PEGAR UMA API DO TELEGRAM ---\033[0m")
             print(" 1. Acesse: my.telegram.org")
             print(" 2. Faça login com o seu número.")
             print(" 3. Clique em 'API development tools'.")
@@ -150,8 +147,8 @@ async def painel():
                     config["api_id"] = int(novo_id)
                     config["api_hash"] = novo_hash.strip()
                     salvar_config(config)
-                    print("\n\033[1;32m[!] API salva com sucesso! O script será fechado.\033[0m")
-                    print("\033[1;33m[!] Rode 'python extrator.py' novamente para logar.\033[0m")
+                    print("\n\033[0;32m[!] API salva com sucesso! O script será fechado.\033[0m")
+                    print("\033[0;32m[!] Rode 'python extrator.py' novamente para logar.\033[0m")
                     await asyncio.sleep(3)
                     return 
                 except ValueError:
@@ -164,7 +161,7 @@ async def painel():
             try: os.makedirs(config["download_dir"], exist_ok=True)
             except: pass
 
-            print(f"\n\033[1;34m[!] Iniciando captura...\033[0m")
+            print(f"\n\033[0;32m[!] Iniciando captura...\033[0m")
             print(" Abra o bot no celular e clique nos botões.")
             print(" \033[1;31mPressione Ctrl+C para parar e voltar ao menu.\033[0m\n")
             
@@ -172,7 +169,7 @@ async def painel():
                 await client.send_message(config["bot_alvo"], '/start')
                 while True: await asyncio.sleep(1)
             except KeyboardInterrupt:
-                print("\n\033[1;33m[!] Captura pausada. Voltando...\033[0m")
+                print("\n\033[0;32m[!] Captura pausada. Voltando...\033[0m")
                 await asyncio.sleep(1.5)
                 
         elif opcao == '5':
