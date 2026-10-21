@@ -72,7 +72,6 @@ async def handler(event):
         pass
 
 def mostrar_banner():
-    # Tema verde escuro sólido
     verde = "\033[0;32m"
     reset = "\033[0m"
 
@@ -107,7 +106,7 @@ async def painel():
         if opcao == '1':
             os.system('clear')
             mostrar_banner()
-            novo_bot = await asyncio.to_thread(input(" Digite o @ do novo bot: "))
+            novo_bot = await asyncio.to_thread(input, " Digite o @ do novo bot: ")
             if novo_bot:
                 if not novo_bot.startswith('@'): novo_bot = '@' + novo_bot
                 config["bot_alvo"] = novo_bot
@@ -119,7 +118,7 @@ async def painel():
             os.system('clear')
             mostrar_banner()
             print(" Dica: Use /sdcard/Download/sua_pasta")
-            novo_dir = await asyncio.to_thread(input(" Novo caminho completo: "))
+            novo_dir = await asyncio.to_thread(input, " Novo caminho completo: ")
             if novo_dir:
                 try:
                     os.makedirs(novo_dir, exist_ok=True)
@@ -139,8 +138,8 @@ async def painel():
             print(" 3. Clique em 'API development tools'.")
             print(" 4. Crie um App e copie o 'api_id' e 'api_hash'.\n")
             
-            novo_id = await asyncio.to_thread(input(" Digite o novo API_ID: "))
-            novo_hash = await asyncio.to_thread(input(" Digite o novo API_HASH: "))
+            novo_id = await asyncio.to_thread(input, " Digite o novo API_ID: ")
+            novo_hash = await asyncio.to_thread(input, " Digite o novo API_HASH: ")
             
             if novo_id and novo_hash:
                 try:
