@@ -26,17 +26,12 @@ os.makedirs(config["download_dir"], exist_ok=True)
 
 client = TelegramClient('sessao_extrator', config["api_id"], config["api_hash"])
 
-@client.on(events.NewMessage)
-async def handler(event):
-    sender = await event.get_sender()
-    sender_user = getattr(sender, 'username', '')
-    
-    if not sender_user or sender_user.lower() != config["bot_alvo"].replace('@', '').lower():
+# Função que processa uma mensagem (serve pro histórico e pro tempo real)
+async def processar_mensagem(msg):
+    if not msg or not msg.text and not msg.media:
         return
 
-    msg = event.message
     data_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    
     log_texto = f"\n========================================\nDATA: {data_hora}\n----------------------------------------\n"
     print("\n" + "="*45)
     
@@ -56,10 +51,13 @@ async def handler(event):
         if msg.video or msg.photo or msg.document:
             print(f"\n[MÍDIA] Baixando arquivo...")
             try:
-                caminho = await msg.download_media(file=config["download_dir"])
-                nome_arquivo = os.path.basename(caminho)
-                print(f"[SALVO] {caminho}")
-                log_texto += f"\n[MÍDIA SALVA]: {nome_arquivo}\n"
+                # O ID da mensagem evita que ele baixe o mesmo arquivo 2x se rodar de novo
+                nome_base = f"{msg.id}"
+                caminho = await msg.download_media(file=os.path.join(config["download_dir"], nome_base))
+                if caminho:
+                    nome_arquivo = os.path.basename(caminho)
+                    print(f"[SALVO] {caminho}")
+                    log_texto += f"\n[MÍDIA SALVA]: {nome_arquivo}\n"
             except Exception as e:
                 print(f"[ERRO] Falha ao baixar: {e}")
                 log_texto += f"\n[ERRO DE DOWNLOAD]: {e}\n"
@@ -68,8 +66,17 @@ async def handler(event):
         log_path = os.path.join(config["download_dir"], "historico_funil.txt")
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(log_texto)
-    except Exception as e:
+    except Exception:
         pass
+
+# Evento em tempo real (Escuta novas mensagens)
+@client.on(events.NewMessage)
+async def handler(event):
+    sender = await event.get_sender()
+    sender_user = getattr(sender, 'username', '')
+    
+    if sender_user and sender_user.lower() == config["bot_alvo"].replace('@', '').lower():
+        await processar_mensagem(event.message)
 
 def mostrar_banner():
     verde = "\033[0;32m"
@@ -94,7 +101,7 @@ async def painel():
         print(" \033[0;32m[1]\033[0m 📱 Trocar Bot Alvo")
         print(" \033[0;32m[2]\033[0m 📂 Alterar Pasta de Salvamento")
         print(" \033[0;32m[3]\033[0m 🔑 Alterar API (ID e Hash)")
-        print(" \033[0;32m[4]\033[0m 🎯 Iniciar Captura (Ouvir o bot)")
+        print(" \033[0;32m[4]\033[0m 🎯 Extrair Histórico + Ouvir Novas")
         print(" \033[0;32m[5]\033[0m ❌ Sair")
         print("\033[0;32m--------------------------------------------------------------------\033[0m")
         
@@ -117,7 +124,6 @@ async def painel():
         elif opcao == '2':
             os.system('clear')
             mostrar_banner()
-            print(" Dica: Use /sdcard/Download/sua_pasta")
             novo_dir = await asyncio.to_thread(input, " Novo caminho completo: ")
             if novo_dir:
                 try:
@@ -132,11 +138,9 @@ async def painel():
         elif opcao == '3':
             os.system('clear')
             mostrar_banner()
-            print("\033[0;32m--- TUTORIAL: COMO PEGAR UMA API DO TELEGRAM ---\033[0m")
+            print("\033[0;32m--- TUTORIAL: COMO PEGAR UMA API ---\033[0m")
             print(" 1. Acesse: my.telegram.org")
-            print(" 2. Faça login com o seu número.")
-            print(" 3. Clique em 'API development tools'.")
-            print(" 4. Crie um App e copie o 'api_id' e 'api_hash'.\n")
+            print(" 2. Faça login e clique em 'API development tools'.\n")
             
             novo_id = await asyncio.to_thread(input, " Digite o novo API_ID: ")
             novo_hash = await asyncio.to_thread(input, " Digite o novo API_HASH: ")
@@ -147,7 +151,6 @@ async def painel():
                     config["api_hash"] = novo_hash.strip()
                     salvar_config(config)
                     print("\n\033[0;32m[!] API salva com sucesso! O script será fechado.\033[0m")
-                    print("\033[0;32m[!] Rode 'python extrator.py' novamente para logar.\033[0m")
                     await asyncio.sleep(3)
                     return 
                 except ValueError:
@@ -160,16 +163,33 @@ async def painel():
             try: os.makedirs(config["download_dir"], exist_ok=True)
             except: pass
 
-            print(f"\n\033[0;32m[!] Iniciando captura...\033[0m")
-            print(" Abra o bot no celular e clique nos botões.")
-            print(" \033[1;31mPressione Ctrl+C para parar e voltar ao menu.\033[0m\n")
+            print(f"\n\033[0;32m[!] Conectando ao alvo {config['bot_alvo']}...\033[0m")
             
             try:
+                # Puxa a entidade do bot
+                entidade = await client.get_entity(config["bot_alvo"])
+                
+                print("\033[1;33m[AGUARDE] Puxando histórico de mensagens antigas...\033[0m")
+                # Varre o histórico de trás pra frente (limit=200 define o máximo de msgs pra trás)
+                # Se quiser TUDO, mude para limit=None, mas cuidado com bots com 10 mil mensagens.
+                async for msg in client.iter_messages(entidade, limit=200):
+                    await processar_mensagem(msg)
+                
+                print("\n\033[0;32m[✓] Histórico baixado com sucesso!\033[0m")
+                print(" \033[1;34m[!] Agora escutando em tempo real...\033[0m")
+                print(" Abra o bot no celular e clique nos botões.")
+                print(" \033[1;31mPressione Ctrl+C para parar e voltar ao menu.\033[0m\n")
+                
+                # Manda um start pra garantir que o bot está ativo e continua escutando
                 await client.send_message(config["bot_alvo"], '/start')
                 while True: await asyncio.sleep(1)
+                
             except KeyboardInterrupt:
                 print("\n\033[0;32m[!] Captura pausada. Voltando...\033[0m")
                 await asyncio.sleep(1.5)
+            except Exception as e:
+                print(f"\n\033[1;31m[ERRO] Não foi possível puxar o histórico: {e}\033[0m")
+                await asyncio.sleep(3)
                 
         elif opcao == '5':
             print("\n[!] Desconectando e saindo...")
