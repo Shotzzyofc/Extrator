@@ -10,7 +10,7 @@ def carregar_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
             cfg = json.load(f)
-            if "filtro" not in cfg: cfg["filtro"] = "tudo" # Atualiza config antigo
+            if "filtro" not in cfg: cfg["filtro"] = "tudo"
             if "alvo" not in cfg and "bot_alvo" in cfg: cfg["alvo"] = cfg["bot_alvo"]
             return cfg
     return {
@@ -31,19 +31,14 @@ os.makedirs(config["download_dir"], exist_ok=True)
 client = TelegramClient('sessao_extrator', config["api_id"], config["api_hash"])
 
 async def processar_mensagem(msg, sender_name="Desconhecido", chat_name="Chat"):
-    if not msg:
-        return
+    if not msg: return
 
-    # --- LÓGICA DE FILTRO ---
     tem_texto = bool(msg.text)
     tem_midia = bool(msg.video or msg.photo or msg.document)
     
-    if config["filtro"] == "midia" and not tem_midia:
-        return # Pula se não tiver mídia e o filtro for só mídia
-    if config["filtro"] == "texto" and not tem_texto:
-        return # Pula se não tiver texto e o filtro for só texto
-    if not tem_texto and not tem_midia:
-        return # Pula mensagens vazias (sticker sem texto, etc)
+    if config["filtro"] == "midia" and not tem_midia: return 
+    if config["filtro"] == "texto" and not tem_texto: return 
+    if not tem_texto and not tem_midia: return 
 
     data_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     log_texto = f"\n========================================\nDATA: {data_hora}\nCHAT: {chat_name}\nREMETENTE: {sender_name}\n----------------------------------------\n"
@@ -106,7 +101,7 @@ def mostrar_banner():
     print(f"{verde}  ███████╗██╔╝ ██╗   ██║   ██║  ██║██║  ██║╚██████╗   ██║   ╚██████╔╝██║  ██║{reset}")
     print(f"{verde}  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝{reset}")
     print(f"{verde}└──────────────────────────────────────────────────────────────────┘{reset}")
-    print(f"{verde}               [ SYSTEM PRO V6 ] :: Criado por @zetx.py{reset}\n")
+    print(f"{verde}               [ SYSTEM PRO V7 ] :: Criado por @zetx.py{reset}\n")
 
 async def painel():
     while True:
@@ -122,7 +117,8 @@ async def painel():
         print(f" \033[0;32m[4]\033[0m ⚙️  Filtro de Extração: \033[1;33m[{filtro_atual}]\033[0m")
         print(" \033[0;32m[5]\033[0m 🎯 Extrair Histórico do Alvo Atual")
         print(" \033[0;32m[6]\033[0m 🌐 Extrair de TODOS os Grupos/Canais")
-        print(" \033[0;32m[7]\033[0m ❌ Sair")
+        print(" \033[0;32m[7]\033[0m 📋 Listar IDs dos Meus Grupos/Canais")
+        print(" \033[0;32m[8]\033[0m ❌ Sair")
         print("\033[0;32m--------------------------------------------------------------------\033[0m")
         
         try:
@@ -133,9 +129,10 @@ async def painel():
         if opcao == '1':
             os.system('clear')
             mostrar_banner()
-            novo_alvo = await asyncio.to_thread(input, " Digite o @ do bot ou grupo: ")
+            print("\033[1;33mDica: Cole o @username ou o ID do grupo (ex: -100123456789)\033[0m")
+            novo_alvo = await asyncio.to_thread(input, " Digite o alvo: ")
             if novo_alvo:
-                if not novo_alvo.startswith('@') and not novo_alvo.startswith('http'): 
+                if not novo_alvo.startswith('@') and not novo_alvo.startswith('http') and not novo_alvo.startswith('-'): 
                     novo_alvo = '@' + novo_alvo
                 config["alvo"] = novo_alvo
                 salvar_config(config)
@@ -161,7 +158,6 @@ async def painel():
             mostrar_banner()
             novo_id = await asyncio.to_thread(input, " Digite o novo API_ID: ")
             novo_hash = await asyncio.to_thread(input, " Digite o novo API_HASH: ")
-            
             if novo_id and novo_hash:
                 try:
                     config["api_id"] = int(novo_id)
@@ -232,26 +228,46 @@ async def painel():
                 async for dialog in client.iter_dialogs():
                     if dialog.is_group or dialog.is_channel:
                         print(f"\n\033[0;36m>>> Entrando no chat: {dialog.name}\033[0m")
-                        
-                        # Puxa as últimas 20 mensagens de cada grupo pra não tomar rate-limit
                         async for msg in client.iter_messages(dialog.id, limit=20):
                             sender = await msg.get_sender()
                             sender_name = getattr(sender, 'first_name', None) or getattr(sender, 'username', 'Desconhecido')
                             await processar_mensagem(msg, sender_name, dialog.name)
-                        
-                        await asyncio.sleep(2) # Pausa de 2s entre grupos para evitar ban do Telegram
-                        
-                print("\n\033[0;32m[✓] Varredura em todos os grupos concluída!\033[0m")
-                await asyncio.to_thread(input, "\n Pressione Enter para voltar ao menu...")
-                
+                        await asyncio.sleep(2) # Pausa anti-ban
+                print("\n\033[0;32m[✓] Varredura concluída!\033[0m")
+                await asyncio.to_thread(input, "\n Pressione Enter para voltar...")
             except KeyboardInterrupt:
-                print("\n\033[1;33m[!] Varredura cancelada pelo usuário.\033[0m")
+                print("\n\033[1;33m[!] Cancelado.\033[0m")
                 await asyncio.sleep(2)
             except Exception as e:
-                print(f"\n\033[1;31m[ERRO] Falha na varredura: {e}\033[0m")
+                print(f"\n\033[1;31m[ERRO] Falha: {e}\033[0m")
                 await asyncio.sleep(4)
 
         elif opcao == '7':
+            os.system('clear')
+            mostrar_banner()
+            print("\n\033[1;33m[!] Buscando seus grupos e canais...\033[0m\n")
+            try:
+                count = 0
+                async for dialog in client.iter_dialogs():
+                    if dialog.is_group or dialog.is_channel:
+                        count += 1
+                        # Pega o link ou o username (se existir)
+                        username = getattr(dialog.entity, 'username', None)
+                        user_str = f"@{username}" if username else "Privado/Sem @"
+                        
+                        print(f"\033[1;36mNome:\033[0m {dialog.name}")
+                        print(f"\033[0m  ID: \033[1;32m{dialog.id}\033[0m")
+                        print(f"\033[0m  User: {user_str}")
+                        print("\033[1;30m-----------------------------------\033[0m")
+                
+                print(f"\n Total: {count} grupos/canais encontrados.")
+                print("\033[1;33m[!] Copie o ID (número) ou o @ e use na opção [1].\033[0m")
+                await asyncio.to_thread(input, "\n Pressione Enter para voltar...")
+            except Exception as e:
+                print(f"\n\033[1;31m[ERRO] Falha ao listar: {e}\033[0m")
+                await asyncio.sleep(3)
+
+        elif opcao == '8':
             print("\n[!] Desconectando e saindo...")
             await client.disconnect()
             break
