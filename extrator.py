@@ -193,9 +193,22 @@ async def painel():
             try: os.makedirs(config["download_dir"], exist_ok=True)
             except: pass
 
-            print(f"\n\033[0;32m[!] Conectando ao alvo {config['alvo']}...\033[0m")
+            print(f"\n\033[0;32m[!] Buscando alvo: {config['alvo']}...\033[0m")
+            
+            entidade = None
             try:
-                entidade = await client.get_entity(config["alvo"])
+                # LÓGICA CORRIGIDA PARA IDs NUMÉRICOS
+                if config["alvo"].startswith('-') or config["alvo"].isdigit():
+                    target_id = int(config["alvo"])
+                    async for dialog in client.iter_dialogs():
+                        if dialog.id == target_id:
+                            entidade = dialog.entity
+                            break
+                    if not entidade:
+                        raise Exception("ID não encontrado na sua lista de conversas. Verifique se você realmente está no grupo.")
+                else:
+                    entidade = await client.get_entity(config["alvo"])
+                
                 print("\033[1;33m[AGUARDE] Puxando histórico (200 msgs)...\033[0m")
                 
                 async for msg in client.iter_messages(entidade, limit=200):
@@ -208,7 +221,7 @@ async def painel():
                 print(" \033[1;34m[!] Escutando em tempo real... (Ctrl+C para parar)\033[0m\n")
                 
                 if getattr(entidade, 'bot', False):
-                    await client.send_message(config["alvo"], '/start')
+                    await client.send_message(entidade, '/start')
                     
                 while True: await asyncio.sleep(1)
             except KeyboardInterrupt:
@@ -232,7 +245,7 @@ async def painel():
                             sender = await msg.get_sender()
                             sender_name = getattr(sender, 'first_name', None) or getattr(sender, 'username', 'Desconhecido')
                             await processar_mensagem(msg, sender_name, dialog.name)
-                        await asyncio.sleep(2) # Pausa anti-ban
+                        await asyncio.sleep(2)
                 print("\n\033[0;32m[✓] Varredura concluída!\033[0m")
                 await asyncio.to_thread(input, "\n Pressione Enter para voltar...")
             except KeyboardInterrupt:
@@ -251,7 +264,6 @@ async def painel():
                 async for dialog in client.iter_dialogs():
                     if dialog.is_group or dialog.is_channel:
                         count += 1
-                        # Pega o link ou o username (se existir)
                         username = getattr(dialog.entity, 'username', None)
                         user_str = f"@{username}" if username else "Privado/Sem @"
                         
@@ -261,7 +273,7 @@ async def painel():
                         print("\033[1;30m-----------------------------------\033[0m")
                 
                 print(f"\n Total: {count} grupos/canais encontrados.")
-                print("\033[1;33m[!] Copie o ID (número) ou o @ e use na opção [1].\033[0m")
+                print("\033[1;33m[!] Copie o ID (número) e use na opção [1].\033[0m")
                 await asyncio.to_thread(input, "\n Pressione Enter para voltar...")
             except Exception as e:
                 print(f"\n\033[1;31m[ERRO] Falha ao listar: {e}\033[0m")
