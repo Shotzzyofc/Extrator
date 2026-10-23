@@ -9,12 +9,16 @@ CONFIG_FILE = "config.json"
 def carregar_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r") as f:
-            return json.load(f)
+            cfg = json.load(f)
+            if "filtro" not in cfg: cfg["filtro"] = "tudo" # Atualiza config antigo
+            if "alvo" not in cfg and "bot_alvo" in cfg: cfg["alvo"] = cfg["bot_alvo"]
+            return cfg
     return {
         "api_id": 35358927, 
         "api_hash": "2d06935658e2ddfd3eeeef71fb60117e",
-        "bot_alvo": "@VAZOUMC_BOT",
-        "download_dir": "/sdcard/Download/previas_extraidas"
+        "alvo": "@VAZOUMC_BOT",
+        "download_dir": "/sdcard/Download/previas_extraidas",
+        "filtro": "tudo"
     }
 
 def salvar_config(cfg):
@@ -26,16 +30,27 @@ os.makedirs(config["download_dir"], exist_ok=True)
 
 client = TelegramClient('sessao_extrator', config["api_id"], config["api_hash"])
 
-# Função que processa uma mensagem (serve pro histórico e pro tempo real)
-async def processar_mensagem(msg):
-    if not msg or not msg.text and not msg.media:
+async def processar_mensagem(msg, sender_name="Desconhecido", chat_name="Chat"):
+    if not msg:
         return
 
-    data_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    log_texto = f"\n========================================\nDATA: {data_hora}\n----------------------------------------\n"
-    print("\n" + "="*45)
+    # --- LÓGICA DE FILTRO ---
+    tem_texto = bool(msg.text)
+    tem_midia = bool(msg.video or msg.photo or msg.document)
     
-    if msg.text:
+    if config["filtro"] == "midia" and not tem_midia:
+        return # Pula se não tiver mídia e o filtro for só mídia
+    if config["filtro"] == "texto" and not tem_texto:
+        return # Pula se não tiver texto e o filtro for só texto
+    if not tem_texto and not tem_midia:
+        return # Pula mensagens vazias (sticker sem texto, etc)
+
+    data_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    log_texto = f"\n========================================\nDATA: {data_hora}\nCHAT: {chat_name}\nREMETENTE: {sender_name}\n----------------------------------------\n"
+    print("\n" + "="*45)
+    print(f"[CHAT]: {chat_name} | [DE]: {sender_name}")
+    
+    if tem_texto:
         print(f"[TEXTO]:\n{msg.text}")
         log_texto += f"[TEXTO]:\n{msg.text}\n"
     
@@ -47,36 +62,37 @@ async def processar_mensagem(msg):
                 print(f"  -> [ {btn.text} ]")
                 log_texto += f"  -> [ {btn.text} ]\n"
                 
-    if msg.media:
-        if msg.video or msg.photo or msg.document:
-            print(f"\n[MÍDIA] Baixando arquivo...")
-            try:
-                # O ID da mensagem evita que ele baixe o mesmo arquivo 2x se rodar de novo
-                nome_base = f"{msg.id}"
-                caminho = await msg.download_media(file=os.path.join(config["download_dir"], nome_base))
-                if caminho:
-                    nome_arquivo = os.path.basename(caminho)
-                    print(f"[SALVO] {caminho}")
-                    log_texto += f"\n[MÍDIA SALVA]: {nome_arquivo}\n"
-            except Exception as e:
-                print(f"[ERRO] Falha ao baixar: {e}")
-                log_texto += f"\n[ERRO DE DOWNLOAD]: {e}\n"
+    if tem_midia:
+        print(f"\n[MÍDIA] Baixando arquivo...")
+        try:
+            nome_base = f"{msg.id}"
+            caminho = await msg.download_media(file=os.path.join(config["download_dir"], nome_base))
+            if caminho:
+                nome_arquivo = os.path.basename(caminho)
+                print(f"[SALVO] {caminho}")
+                log_texto += f"\n[MÍDIA SALVA]: {nome_arquivo}\n"
+        except Exception as e:
+            print(f"[ERRO] Falha ao baixar: {e}")
+            log_texto += f"\n[ERRO DE DOWNLOAD]: {e}\n"
 
     try:
-        log_path = os.path.join(config["download_dir"], "historico_funil.txt")
+        log_path = os.path.join(config["download_dir"], "historico_extraido.txt")
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(log_texto)
     except Exception:
         pass
 
-# Evento em tempo real (Escuta novas mensagens)
 @client.on(events.NewMessage)
 async def handler(event):
-    sender = await event.get_sender()
-    sender_user = getattr(sender, 'username', '')
+    chat = await event.get_chat()
+    chat_username = getattr(chat, 'username', '')
+    alvo_limpo = config["alvo"].replace('@', '').lower()
     
-    if sender_user and sender_user.lower() == config["bot_alvo"].replace('@', '').lower():
-        await processar_mensagem(event.message)
+    if (chat_username and chat_username.lower() == alvo_limpo) or (str(chat.id) == alvo_limpo):
+        sender = await event.get_sender()
+        sender_name = getattr(sender, 'first_name', None) or getattr(sender, 'username', 'Bot')
+        chat_name = getattr(chat, 'title', getattr(chat, 'first_name', 'Bot'))
+        await processar_mensagem(event.message, sender_name, chat_name)
 
 def mostrar_banner():
     verde = "\033[0;32m"
@@ -90,19 +106,23 @@ def mostrar_banner():
     print(f"{verde}  ███████╗██╔╝ ██╗   ██║   ██║  ██║██║  ██║╚██████╗   ██║   ╚██████╔╝██║  ██║{reset}")
     print(f"{verde}  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝{reset}")
     print(f"{verde}└──────────────────────────────────────────────────────────────────┘{reset}")
-    print(f"{verde}               [ SYSTEM PRO V4 ] :: Criado por @zetx.py{reset}\n")
+    print(f"{verde}               [ SYSTEM PRO V6 ] :: Criado por @zetx.py{reset}\n")
 
 async def painel():
     while True:
         os.system('clear')
         mostrar_banner()
         
+        filtro_atual = config['filtro'].upper()
+        
         print("\033[0;32m--------------------------------------------------------------------\033[0m")
-        print(" \033[0;32m[1]\033[0m 📱 Trocar Bot Alvo")
+        print(" \033[0;32m[1]\033[0m 📱 Trocar Bot/Grupo Alvo")
         print(" \033[0;32m[2]\033[0m 📂 Alterar Pasta de Salvamento")
         print(" \033[0;32m[3]\033[0m 🔑 Alterar API (ID e Hash)")
-        print(" \033[0;32m[4]\033[0m 🎯 Extrair Histórico + Ouvir Novas")
-        print(" \033[0;32m[5]\033[0m ❌ Sair")
+        print(f" \033[0;32m[4]\033[0m ⚙️  Filtro de Extração: \033[1;33m[{filtro_atual}]\033[0m")
+        print(" \033[0;32m[5]\033[0m 🎯 Extrair Histórico do Alvo Atual")
+        print(" \033[0;32m[6]\033[0m 🌐 Extrair de TODOS os Grupos/Canais")
+        print(" \033[0;32m[7]\033[0m ❌ Sair")
         print("\033[0;32m--------------------------------------------------------------------\033[0m")
         
         try:
@@ -113,10 +133,11 @@ async def painel():
         if opcao == '1':
             os.system('clear')
             mostrar_banner()
-            novo_bot = await asyncio.to_thread(input, " Digite o @ do novo bot: ")
-            if novo_bot:
-                if not novo_bot.startswith('@'): novo_bot = '@' + novo_bot
-                config["bot_alvo"] = novo_bot
+            novo_alvo = await asyncio.to_thread(input, " Digite o @ do bot ou grupo: ")
+            if novo_alvo:
+                if not novo_alvo.startswith('@') and not novo_alvo.startswith('http'): 
+                    novo_alvo = '@' + novo_alvo
+                config["alvo"] = novo_alvo
                 salvar_config(config)
                 print(f"\n\033[0;32m[!] Alvo alterado com sucesso.\033[0m")
                 await asyncio.sleep(1.5)
@@ -138,10 +159,6 @@ async def painel():
         elif opcao == '3':
             os.system('clear')
             mostrar_banner()
-            print("\033[0;32m--- TUTORIAL: COMO PEGAR UMA API ---\033[0m")
-            print(" 1. Acesse: my.telegram.org")
-            print(" 2. Faça login e clique em 'API development tools'.\n")
-            
             novo_id = await asyncio.to_thread(input, " Digite o novo API_ID: ")
             novo_hash = await asyncio.to_thread(input, " Digite o novo API_HASH: ")
             
@@ -160,38 +177,81 @@ async def painel():
         elif opcao == '4':
             os.system('clear')
             mostrar_banner()
+            print("\033[0;32m--- CONFIGURAR FILTRO DE DOWNLOAD ---\033[0m")
+            print(" [1] Tudo (Textos, Fotos e Vídeos)")
+            print(" [2] Apenas Mídias (Fotos e Vídeos)")
+            print(" [3] Apenas Textos\n")
+            
+            escolha_filtro = await asyncio.to_thread(input, " Escolha o filtro: ")
+            if escolha_filtro == '1': config["filtro"] = "tudo"
+            elif escolha_filtro == '2': config["filtro"] = "midia"
+            elif escolha_filtro == '3': config["filtro"] = "texto"
+            
+            salvar_config(config)
+            print(f"\n\033[0;32m[!] Filtro alterado para: {config['filtro'].upper()}\033[0m")
+            await asyncio.sleep(1.5)
+
+        elif opcao == '5':
+            os.system('clear')
+            mostrar_banner()
             try: os.makedirs(config["download_dir"], exist_ok=True)
             except: pass
 
-            print(f"\n\033[0;32m[!] Conectando ao alvo {config['bot_alvo']}...\033[0m")
-            
+            print(f"\n\033[0;32m[!] Conectando ao alvo {config['alvo']}...\033[0m")
             try:
-                # Puxa a entidade do bot
-                entidade = await client.get_entity(config["bot_alvo"])
+                entidade = await client.get_entity(config["alvo"])
+                print("\033[1;33m[AGUARDE] Puxando histórico (200 msgs)...\033[0m")
                 
-                print("\033[1;33m[AGUARDE] Puxando histórico de mensagens antigas...\033[0m")
-                # Varre o histórico de trás pra frente (limit=200 define o máximo de msgs pra trás)
-                # Se quiser TUDO, mude para limit=None, mas cuidado com bots com 10 mil mensagens.
                 async for msg in client.iter_messages(entidade, limit=200):
-                    await processar_mensagem(msg)
+                    sender = await msg.get_sender()
+                    sender_name = getattr(sender, 'first_name', None) or getattr(sender, 'username', 'Bot')
+                    chat_name = getattr(entidade, 'title', getattr(entidade, 'first_name', 'Bot'))
+                    await processar_mensagem(msg, sender_name, chat_name)
                 
-                print("\n\033[0;32m[✓] Histórico baixado com sucesso!\033[0m")
-                print(" \033[1;34m[!] Agora escutando em tempo real...\033[0m")
-                print(" Abra o bot no celular e clique nos botões.")
-                print(" \033[1;31mPressione Ctrl+C para parar e voltar ao menu.\033[0m\n")
+                print("\n\033[0;32m[✓] Histórico baixado!\033[0m")
+                print(" \033[1;34m[!] Escutando em tempo real... (Ctrl+C para parar)\033[0m\n")
                 
-                # Manda um start pra garantir que o bot está ativo e continua escutando
-                await client.send_message(config["bot_alvo"], '/start')
+                if getattr(entidade, 'bot', False):
+                    await client.send_message(config["alvo"], '/start')
+                    
                 while True: await asyncio.sleep(1)
-                
             except KeyboardInterrupt:
                 print("\n\033[0;32m[!] Captura pausada. Voltando...\033[0m")
                 await asyncio.sleep(1.5)
             except Exception as e:
-                print(f"\n\033[1;31m[ERRO] Não foi possível puxar o histórico: {e}\033[0m")
-                await asyncio.sleep(3)
+                print(f"\n\033[1;31m[ERRO] Falha ao acessar: {e}\033[0m")
+                await asyncio.sleep(4)
+
+        elif opcao == '6':
+            os.system('clear')
+            mostrar_banner()
+            print("\n\033[1;33m[!] Iniciando varredura em TODOS os grupos e canais...\033[0m")
+            print(" Isso pode demorar. Pressione Ctrl+C para abortar.\n")
+            
+            try:
+                async for dialog in client.iter_dialogs():
+                    if dialog.is_group or dialog.is_channel:
+                        print(f"\n\033[0;36m>>> Entrando no chat: {dialog.name}\033[0m")
+                        
+                        # Puxa as últimas 20 mensagens de cada grupo pra não tomar rate-limit
+                        async for msg in client.iter_messages(dialog.id, limit=20):
+                            sender = await msg.get_sender()
+                            sender_name = getattr(sender, 'first_name', None) or getattr(sender, 'username', 'Desconhecido')
+                            await processar_mensagem(msg, sender_name, dialog.name)
+                        
+                        await asyncio.sleep(2) # Pausa de 2s entre grupos para evitar ban do Telegram
+                        
+                print("\n\033[0;32m[✓] Varredura em todos os grupos concluída!\033[0m")
+                await asyncio.to_thread(input, "\n Pressione Enter para voltar ao menu...")
                 
-        elif opcao == '5':
+            except KeyboardInterrupt:
+                print("\n\033[1;33m[!] Varredura cancelada pelo usuário.\033[0m")
+                await asyncio.sleep(2)
+            except Exception as e:
+                print(f"\n\033[1;31m[ERRO] Falha na varredura: {e}\033[0m")
+                await asyncio.sleep(4)
+
+        elif opcao == '7':
             print("\n[!] Desconectando e saindo...")
             await client.disconnect()
             break
